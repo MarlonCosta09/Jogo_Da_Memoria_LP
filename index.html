@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo da Memória - Mestres em Gramática</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Estilos globais e reset */
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #3a1c71, #d76d77, #ffaf7b); /* Gradiente vibrante */
+            color: #ecf0f1;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+
+        .container {
+            background-color: rgba(0, 0, 0, 0.6); /* Fundo semi-transparente */
+            border-radius: 20px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 25px;
+            max-width: 900px;
+            width: 100%;
+            box-sizing: border-box;
+            backdrop-filter: blur(5px); /* Efeito de desfoque */
+            -webkit-backdrop-filter: blur(5px); /* Compatibilidade Safari */
+        }
+
+        h1 {
+            color: #ffaf7b; /* Cor de destaque */
+            margin-bottom: 10px;
+            font-size: 3em;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.4);
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        /* Estilos para as telas do jogo */
+        .game-screen, .start-screen, .results-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .start-screen input, .start-screen select {
+            width: 80%;
+            max-width: 300px;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #d76d77;
+            background-color: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 1.1em;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .start-screen label {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #ecf0f1;
+            margin-bottom: 5px;
+            text-align: left;
+            width: 80%;
+            max-width: 300px;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            max-width: 600px; /* Aumentado para acomodar o cronômetro */
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #d76d77;
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 10px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); /* 4 colunas */
+            grid-template-rows: repeat(6, 1fr); /* 6 linhas para 24 cartas */
+            gap: 15px;
+            width: 600px; /* Tamanho fixo para o tabuleiro */
+            height: 900px; /* Ajustado para acomodar mais linhas (600px / 4 * 6 = 900px) */
+            perspective: 1000px; /* Para o efeito 3D de virar a carta */
+        }
+
+        .card-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1); /* Curva de animação mais suave */
+            cursor: pointer;
+            border-radius: 12px;
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-container.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            backface-visibility: hidden;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4em; /* Tamanho do texto ajustado para gramática */
+            font-weight: bold;
+            color: #333;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+            box-sizing: border-box;
+            padding: 5px; /* Adiciona um pouco de padding para o texto */
+            text-align: center;
+            line-height: 1.2; /* Ajusta a altura da linha para evitar corte */
+            overflow: hidden; /* Garante que o texto não vaze */
+            text-overflow: ellipsis; /* Adiciona reticências se o texto for muito longo */
+        }
+
+        .card-back {
+            background: linear-gradient(145deg, #6a11cb, #2575fc); /* Fundo da carta virada */
+            transform: rotateY(0deg);
+            border: 3px solid #ffaf7b; /* Borda de destaque */
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.4);
+        }
+
+        .card-front {
+            background-color: #ecf0f1; /* Fundo da carta revelada */
+            transform: rotateY(180deg);
+            border: 3px solid #d76d77;
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-container.matched .card-front {
+            background-color: #2ecc71; /* Verde para cartas combinadas */
+            opacity: 0.8;
+            pointer-events: none; /* Desabilita clique em cartas combinadas */
+        }
+
+        .card-container.disabled {
+            pointer-events: none; /* Desabilita clique durante a animação de virar */
+        }
+
+        .button {
+            background: linear-gradient(45deg, #ffaf7b, #d76d77); /* Gradiente para o botão */
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+
+        .button:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+            filter: brightness(1.1);
+        }
+
+        .button:active {
+            transform: translateY(0);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .results-screen p {
+            font-size: 1.5em;
+            margin: 10px 0;
+            color: #ecf0f1;
+            text-align: center;
+        }
+
+        .results-screen p strong {
+            color: #ffaf7b;
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .container {
+                padding: 25px;
+                gap: 15px;
+            }
+
+            h1 {
+                font-size: 2.2em;
+            }
+
+            .game-info {
+                font-size: 1.1em;
+                padding: 8px 15px;
+                flex-wrap: wrap; /* Permite que os itens quebrem a linha */
+                justify-content: center;
+                gap: 10px;
+            }
+
+            .board {
+                width: 350px;
+                height: 525px; /* 350px / 4 * 6 = 525px */
+                gap: 10px;
+            }
+
+            .card-front, .card-back {
+                font-size: 1.1em; /* Ajusta o tamanho da fonte para telas menores */
+            }
+
+            .button {
+                padding: 12px 25px;
+                font-size: 1em;
+            }
+
+            .start-screen input, .start-screen select {
+                width: 90%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .game-info {
+                flex-direction: column;
+                gap: 5px;
+                text-align: center;
+            }
+
+            .board {
+                width: 280px;
+                height: 420px; /* 280px / 4 * 6 = 420px */
+                gap: 8px;
+            }
+
+            .card-front, .card-back {
+                font-size: 0.9em; /* Ajusta o tamanho da fonte para telas muito pequenas */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Jogo da Memória - Mestres em Gramática</h1>
+
+        <!-- Tela de Início -->
+        <div id="startScreen" class="start-screen">
+            <label for="studentNameInput">Nome do Aluno:</label>
+            <input type="text" id="studentNameInput" placeholder="DIGITE SEU NOME" required>
+
+            <label for="classSelect">Turma:</label>
+            <select id="classSelect" required>
+                <option value="">Selecione a turma</option>
+                <option value="7º 01">7º 01</option>
+                <option value="8º 01">8º 01</option>
+                <option value="8º 02">8º 02</option>
+            </select>
+
+            <button id="startGameButton" class="button">Iniciar Jogo</button>
+        </div>
+
+        <!-- Tela do Jogo -->
+        <div id="gameScreen" class="game-screen" style="display: none;">
+            <div class="game-info">
+                <span>Movimentos: <span id="moves">0</span></span>
+                <span>Pares Encontrados: <span id="matches">0</span> / <span id="totalPairs">12</span></span>
+                <span>Tempo: <span id="timer">00:00</span></span>
+            </div>
+            <div id="gameBoard" class="board"></div>
+            <button id="resetButton" class="button">Reiniciar Jogo</button>
+        </div>
+
+        <!-- Tela de Resultados -->
+        <div id="resultsScreen" class="results-screen" style="display: none;">
+            <h2>Parabéns!</h2>
+            <p>Aluno: <strong id="finalStudentName"></strong></p>
+            <p>Turma: <strong id="finalClass"></strong></p>
+            <p>Tempo: <strong id="finalTime"></strong></p>
+            <p>Movimentos: <strong id="finalMoves"></strong></p>
+            <button id="playAgainButton" class="button">Jogar Novamente</button>
+        </div>
+    </div>
+
+    <script>
+        // Variáveis globais para os elementos do DOM
+        const startScreen = document.getElementById('startScreen');
+        const studentNameInput = document.getElementById('studentNameInput');
+        const classSelect = document.getElementById('classSelect');
+        const startGameButton = document.getElementById('startGameButton');
+
+        const gameScreen = document.getElementById('gameScreen');
+        const gameBoard = document.getElementById('gameBoard');
+        const movesDisplay = document.getElementById('moves');
+        const matchesDisplay = document.getElementById('matches');
+        const totalPairsDisplay = document.getElementById('totalPairs');
+        const timerDisplay = document.getElementById('timer');
+        const resetButton = document.getElementById('resetButton');
+
+        const resultsScreen = document.getElementById('resultsScreen');
+        const finalStudentName = document.getElementById('finalStudentName');
+        const finalClass = document.getElementById('finalClass');
+        const finalTime = document.getElementById('finalTime');
+        const finalMoves = document.getElementById('finalMoves');
+        const playAgainButton = document.getElementById('playAgainButton');
+
+
+        // Banco de dados grande de pares de palavras e suas classificações gramaticais
+        const allGrammarPairs = [
+            { word: 'Correu', category: 'Verbo' },
+            { word: 'Casa', category: 'Substantivo' },
+            { word: 'Bonito', category: 'Adjetivo' },
+            { word: 'Rapidamente', category: 'Advérbio' },
+            { word: 'E', category: 'Conjunção' },
+            { word: 'Em', category: 'Preposição' },
+            { word: 'Eu', category: 'Pronome' },
+            { word: 'Um', category: 'Artigo' },
+            { word: 'Sempre', category: 'Advérbio' },
+            { word: 'Flor', category: 'Substantivo' },
+            { word: 'Grande', category: 'Adjetivo' },
+            { word: 'Mas', category: 'Conjunção' },
+            { word: 'Ontem', category: 'Advérbio' },
+            { word: 'Mesa', category: 'Substantivo' },
+            { word: 'Inteligente', category: 'Adjetivo' },
+            { word: 'Com', category: 'Preposição' },
+            { word: 'Nós', category: 'Pronome' },
+            { word: 'Aquele', category: 'Pronome' },
+            { word: 'Cantar', category: 'Verbo' },
+            { word: 'Felicidade', category: 'Substantivo' },
+            { word: 'Triste', category: 'Adjetivo' },
+            { word: 'Muito', category: 'Advérbio' },
+            { word: 'Para', category: 'Preposição' },
+            { word: 'Ou', category: 'Conjunção' },
+            { word: 'Viver', category: 'Verbo' },
+            { word: 'Criança', category: 'Substantivo' },
+            { word: 'Alto', category: 'Adjetivo' },
+            { word: 'Pular', category: 'Verbo' },
+            { word: 'Livro', category: 'Substantivo' },
+            { word: 'Devagar', category: 'Advérbio' },
+            { word: 'Porque', category: 'Conjunção' },
+            { word: 'Sobre', category: 'Preposição' }
+        ];
+
+        let currentGrammarPairs = []; // Pares selecionados para o jogo atual
+        let cards = []; // Armazenará as cartas do jogo
+
+        // Estado do jogo
+        let flippedCards = []; // Armazena as duas cartas viradas atualmente
+        let matchedPairs = 0;
+        let totalMoves = 0;
+        let lockBoard = false; // Impede cliques enquanto as cartas estão virando
+        let timerInterval;
+        let seconds = 0;
+        let studentName = '';
+        let studentClass = '';
+
+        const NUM_PAIRS_PER_GAME = 12; // Número de pares a serem usados em cada jogo
+
+        /**
+         * Seleciona aleatoriamente um número de pares do banco de dados grande.
+         * @returns {Array<Object>} Um array com os pares selecionados.
+         */
+        function selectRandomGrammarPairs() {
+            const shuffled = [...allGrammarPairs].sort(() => 0.5 - Math.random());
+            return shuffled.slice(0, NUM_PAIRS_PER_GAME);
+        }
+
+        /**
+         * Inicializa o jogo: cria e embaralha as cartas.
+         */
+        function initializeGame() {
+            currentGrammarPairs = selectRandomGrammarPairs(); // Seleciona novos pares
+            totalPairsDisplay.textContent = currentGrammarPairs.length;
+
+            // Cria as cartas a partir dos pares de gramática selecionados
+            cards = [];
+            currentGrammarPairs.forEach((pair, index) => {
+                cards.push({ display: pair.word, pairId: `pair${index}` });
+                cards.push({ display: pair.category, pairId: `pair${index}` });
+            });
+
+            shuffleCards();
+            renderCards();
+
+            // Reinicia o estado do jogo
+            flippedCards = [];
+            matchedPairs = 0;
+            totalMoves = 0;
+            lockBoard = false;
+            seconds = 0;
+            clearInterval(timerInterval); // Garante que qualquer timer anterior seja parado
+            updateDisplay();
+            updateTimerDisplay(); // Reseta o display do timer
+        }
+
+        /**
+         * Embaralha as cartas usando o algoritmo Fisher-Yates.
+         */
+        function shuffleCards() {
+            for (let i = cards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [cards[i], cards[j]] = [cards[j], cards[i]]; // Troca elementos
+            }
+        }
+
+        /**
+         * Renderiza as cartas no tabuleiro do DOM.
+         */
+        function renderCards() {
+            gameBoard.innerHTML = ''; // Limpa o tabuleiro existente
+            cards.forEach((card, index) => {
+                const cardContainer = document.createElement('div');
+                cardContainer.classList.add('card-container');
+                cardContainer.dataset.index = index; // Para identificar a carta
+                cardContainer.dataset.pairId = card.pairId; // Para identificar o par
+
+                const cardFront = document.createElement('div');
+                cardFront.classList.add('card-front');
+                cardFront.textContent = card.display; // Exibe a palavra ou categoria
+
+                const cardBack = document.createElement('div');
+                cardBack.classList.add('card-back');
+
+                cardContainer.appendChild(cardFront);
+                cardContainer.appendChild(cardBack);
+
+                cardContainer.addEventListener('click', flipCard);
+                gameBoard.appendChild(cardContainer);
+            });
+        }
+
+        /**
+         * Vira uma carta quando clicada.
+         * @param {Event} event - O evento de clique.
+         */
+        function flipCard(event) {
+            const clickedCard = event.currentTarget;
+
+            // Impede cliques se o tabuleiro estiver bloqueado, se a carta já estiver virada ou já combinada
+            if (lockBoard || clickedCard.classList.contains('flipped') || clickedCard.classList.contains('matched')) {
+                return;
+            }
+
+            clickedCard.classList.add('flipped');
+            flippedCards.push(clickedCard);
+
+            if (flippedCards.length === 2) {
+                totalMoves++;
+                updateDisplay();
+                checkForMatch();
+            }
+        }
+
+        /**
+         * Verifica se as duas cartas viradas são um par.
+         */
+        function checkForMatch() {
+            lockBoard = true; // Bloqueia o tabuleiro para evitar mais cliques
+
+            const [card1, card2] = flippedCards;
+            const pairId1 = card1.dataset.pairId;
+            const pairId2 = card2.dataset.pairId;
+
+            if (pairId1 === pairId2) {
+                // É um par!
+                matchedPairs++;
+                updateDisplay();
+                disableCards();
+                if (matchedPairs === currentGrammarPairs.length) {
+                    clearInterval(timerInterval); // Para o cronômetro
+                    showResultsScreen();
+                }
+            } else {
+                // Não é um par, vira as cartas de volta
+                setTimeout(unflipCards, 1000); // Espera um pouco antes de virar de volta
+            }
+        }
+
+        /**
+         * Desabilita as cartas que formam um par.
+         */
+        function disableCards() {
+            flippedCards.forEach(card => {
+                card.classList.add('matched');
+                card.removeEventListener('click', flipCard); // Remove o listener de clique
+            });
+            resetFlippedCards();
+        }
+
+        /**
+         * Vira as cartas que não formam um par de volta.
+         */
+        function unflipCards() {
+            flippedCards.forEach(card => {
+                card.classList.remove('flipped');
+            });
+            resetFlippedCards();
+        }
+
+        /**
+         * Reseta o array de cartas viradas e desbloqueia o tabuleiro.
+         */
+        function resetFlippedCards() {
+            flippedCards = [];
+            lockBoard = false;
+        }
+
+        /**
+         * Atualiza os displays de movimentos e pares encontrados.
+         */
+        function updateDisplay() {
+            movesDisplay.textContent = totalMoves;
+            matchesDisplay.textContent = matchedPairs;
+        }
+
+        /**
+         * Atualiza o display do cronômetro.
+         */
+        function updateTimerDisplay() {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        /**
+         * Inicia o cronômetro.
+         */
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                seconds++;
+                updateTimerDisplay();
+            }, 1000);
+        }
+
+        /**
+         * Exibe a tela de resultados.
+         */
+        function showResultsScreen() {
+            gameScreen.style.display = 'none';
+            resultsScreen.style.display = 'flex';
+
+            finalStudentName.textContent = studentName;
+            finalClass.textContent = studentClass;
+            finalTime.textContent = timerDisplay.textContent;
+            finalMoves.textContent = totalMoves;
+        }
+
+        /**
+         * Lida com o início do jogo a partir da tela de início.
+         */
+        function handleStartGame() {
+            studentName = studentNameInput.value.trim();
+            studentClass = classSelect.value;
+
+            if (studentName === '' || studentClass === '') {
+                alert('Por favor, preencha seu nome e selecione sua turma para começar.');
+                return;
+            }
+
+            startScreen.style.display = 'none';
+            gameScreen.style.display = 'flex';
+            initializeGame();
+            startTimer();
+        }
+
+        /**
+         * Lida com o reinício do jogo (botão dentro do jogo).
+         */
+        function handleResetGame() {
+            clearInterval(timerInterval); // Para o cronômetro
+            gameScreen.style.display = 'none';
+            startScreen.style.display = 'flex';
+            studentNameInput.value = ''; // Limpa o nome
+            classSelect.value = ''; // Reseta a turma
+            // Não chame initializeGame aqui, pois a tela inicial será mostrada
+        }
+
+        /**
+         * Lida com o botão "Jogar Novamente" na tela de resultados.
+         */
+        function handlePlayAgain() {
+            resultsScreen.style.display = 'none';
+            startScreen.style.display = 'flex';
+            studentNameInput.value = ''; // Limpa o nome
+            classSelect.value = ''; // Reseta a turma
+            // Não chame initializeGame aqui, pois a tela inicial será mostrada
+        }
+
+        // Adiciona um ouvinte de evento para converter o texto do input para maiúsculas
+        studentNameInput.addEventListener('input', (event) => {
+            event.target.value = event.target.value.toUpperCase();
+        });
+
+
+        // Adiciona ouvintes de evento aos botões
+        startGameButton.addEventListener('click', handleStartGame);
+        resetButton.addEventListener('click', handleResetGame);
+        playAgainButton.addEventListener('click', handlePlayAgain);
+
+        // Inicializa o jogo mostrando a tela de início
+        window.onload = () => {
+            startScreen.style.display = 'flex';
+            gameScreen.style.display = 'none';
+            resultsScreen.style.display = 'none';
+        };
+    </script>
+</body>
+</html>
